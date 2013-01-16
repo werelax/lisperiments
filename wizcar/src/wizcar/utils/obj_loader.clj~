@@ -1,0 +1,59 @@
+(ns wizcar.loader)
+
+;;; Parsing
+
+(defn add-item [state k value]
+  (swap! state assoc k (conj (k @state)
+                               value)))
+    
+
+;; dispatch the line processor
+(defmulti process-line (fn [line data]
+  (cond
+   (.startsWith line "v ") :vertex
+   (.startsWith line "vn ") :normal
+   (.startsWith line "vt ") :texture
+   (.startsWith line "f ") :face
+   :default :other)))
+
+(defmethod process-line :vertex [line data]
+  (let [vertex (map read-string
+                    (rest (clojure.string/split line #" ")))]
+    (add-item data :vertices vertex)))
+    
+
+(defmethod process-line :normal [line data]
+  (let [normal (map read-string
+                    (rest (clojure.string/split line #" ")))]
+    (add-item data :normals normal)))
+
+(defmethod process-line :texture [line data]
+  ;; not yet
+  )
+
+(defmethod process-line :face [line data]
+  (let [face-points (rest (clojure.string/split line #" "))
+        face (map (fn [chunk]
+                    (let [parts (map #(if (= (.length %) 0)
+                                        0
+                                        (read-string %))
+                                     (clojure.string/split chunk #"/"))
+                          vertex ((:vertices @data) (dec (first parts)))
+                          normal ((:normals @data) (dec (last parts)))]
+                      {:vertex vertex :normal normal}))
+                  face-points)]
+    (add-item data :faces face)))
+
+(defmethod process-line :other [line data]
+  ;; ???
+  )
+
+
+;;; Entry Point
+
+(defn import-model [filename]
+  (let [obj (clojure.string/split (slurp filename) #"\n")
+        data (atom {:vertices [] :normals [] :faces []})]
+    (doall (map #(process-line (clojure.string/trim %) data)
+                obj))
+    (:faces data)))

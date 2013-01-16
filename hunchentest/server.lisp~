@@ -1,0 +1,10 @@
+(load #P"/Users/elias/quicklisp/setup.lisp")
+
+(ql:quickload :hunchentoot)
+
+(defpackage :hunchentest
+  (:use :cl :hunchentoot)
+  (:export :start-server))
+
+(defun start-server ()
+  )
